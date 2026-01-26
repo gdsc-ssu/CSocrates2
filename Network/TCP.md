@@ -2,7 +2,7 @@
 
 > [!abstract] **개요**
 >     
-> - **목표**: TCP/IP의 이론적 이해를 넘어 커널 수준의 동작과 실무적 성능 튜닝 개념 정립
+> - **목표**: TCP/IP의 이론적 이해를 넘어 커널 수준의 동작 개념 정립
 >     
 > - **핵심 키워드**
 > - `#TCP_IP` `#Network_CS` `#Socket_Programming` `#Performance_Tuning`
@@ -105,28 +105,46 @@ TCP/IP 는 하나의 프로토콜이 아닌 TCP와 IP를 합쳐서 부르는 말
 여러 레이어가 있지만, 크게 유저(user) 영역, 커널(kernel) 영역, 디바이스(device) 영역으로 나눌 수 있다. 유저 영역과 커널 영역에서의 작업은 CPU가 수행한다. 
 이 유저 영역과 커널 영역은 디바이스 영역과 구별하기 위해 host라고 부른다. 여기서 디바이스는 패킷을 송수신하는 NIC(Network Interface Card) 이다. 흔히 부르는 랜카드보다 더 정확한 용어이다.
 
+- 호스트 : CPU가 작업 처리, RAM(메인 메모리 사용)
+- 디바이스 : NIC에 탑재된 컨트롤러가 작업 처리 , NIC 내부의 로컬 버퍼 레지스터 사용
+
 ![[Pasted image 20260125205451.png]]
 유저 영역 밑으로 내려가 보자. 우선 애플리케이션이 전송할 데이터를 생성하고 , wirte 시스템 콜을 호출해서 데이터를 보낸다. 소켓(fd)는 이미 생성되어 연결되어 있다고 가정한다. 시스템 콜을 호출하면 커널 영역으로 전환된다. 
 
-Linux나 Unix를 포함한 POSIX 계열 운영체제는 소켓을 file descriptor로 애플리케이션에 노출한다. 이런 POSIX 계열의 운영체제에서 소켓은 파일의 한 종류이다. 파일 레이어는 단순한 검사만 하고 구조체에 연결된 소켓 구조체를 사용해서 소켓 함수를 호출한다. 
-
-![[Pasted image 20260125212200.png]]
 > 어차피, 파일을 사용하는 거면 write()를 쓰면 되지 않을까? 
 
 물론 가능하지만 소켓도 통신 규약이 있으며 정보를 제어하기 위해서는 send(), recv() 같은 함수를 쓰는 것을 권장하는 것이다.
 
 
-커널 소켓은 두 개의 버퍼를 가지고 있다. 송신용으로 준비한 send socket buffer, 수신용으로 준비한 receive socket buffer이다. write 시스템 콜을 호출하면 유저 영역의 데이터가 커널 메모리로 복사되고, send socket buffer 뒷부분에 추가가 된다. 
+Linux나 Unix를 포함한 POSIX 계열 운영체제는 소켓을 file descriptor로 애플리케이션에 노출한다. 이런 POSIX 계열의 운영체제에서 소켓은 파일의 한 종류이다. 파일 레이어는 단순한 검사만 하고 구조체에 연결된 소켓 구조체를 사용해서 소켓 함수를 호출한다. 
+
+![[Pasted image 20260125212200.png]]
+- 커널은 내부적으로 __sys_socket_create__ 를 실행하여 실제 소켓 구조체를 메모리에 생성한다. 
+- 생성된 소켓은 커널 안에 복잡하게 존재하므로, 유저가 사용하기 편하도록 파일 디스크립터와 연결한다. 
+- 우리는 어플리케이션의 복잡한 커널 내부를 알 필요 없이, FD 번호만 가지고 데이터를 읽고 쓸 수 있게 된다.
+
+
+커널 소켓은 두 개의 버퍼를 가지고 있다. 
+- 송신용으로 준비한 send socket buffer
+- 수신용으로 준비한 receive socket buffer이다. 
+
+write 시스템 콜을 호출하면 유저 영역의 데이터가 커널 메모리로 복사되고, send socket buffer 뒷부분에 추가가 된다. 
+
+![[Pasted image 20260126191757.png]]
 
 소켓과 연결된 TCP Control Block(TCB) 구조체가 있다. TCB에는 TCP 연결 처리에 필요한 정보가 있다. TCB에 있는 데이터는 connection state(LISTEN, ESTABLISHED, TIME_WAIT 등), receive window, congestion window, sequence 번호, 재전송 타이머 등이다.
 
 현재 TCP 상태가 데이터 전송을 허용하면 새로운 TCP segment, 즉 패킷을 생성한다. Flow control 같은 이유로 데이터 전송이 불가능하면 시스템 콜은 여기서 끝나고, 유저 모드로 돌아간다(즉, 애플리케이션으로 제어권이 넘어간다).
 
-TCP segment에는 TCP 헤더와 페이로드(payload)가 있다. 페이로드에는 ACK를 받지 않은 send socket buffer에 있는 데이터가 담겨 있다. 페이로드의 최대 길이는 receive window, congestion window, MSS(Maximum Segment Size) 중 최대 값이다.
+![[Pasted image 20260126191853.png]]
+
+TCP segment에는 TCP 헤더와 페이로드(payload)가 있다. 
+- 해더 : source port ~ options
+- payload : application data
+
+페이로드에는 ACK를 받지 않은 send socket buffer에 있는 데이터가 담겨 있다. 페이로드의 최대 길이는 receive window, congestion window, MSS(Maximum Segment Size) 중 최소 값이다.
 
 그리고 TCP checksum을 계산한다. 이 checksum 계산에는 pseudo 헤더 정보(IP 주소들, segment 길이, 프로토콜 번호)를 포함시킨다. 여기서 TCP 상태에 따라 패킷을 한 개 이상 전송할 수 있다.
-
-사실 요즘의 네트워크 스택에서는 checksum offload 기술을 사용하기 때문에, 커널이 직접 TCP checksum을 계산하지 않고 대신 NIC가 checksum을 계산한다. 여기서는 설명의 편의를 위해 커널이 checksum을 계산한다고 가정한다.
 
 ![[Pasted image 20260125221052.png]]
 
@@ -138,11 +156,7 @@ Ethernet 레이어는 ARP(Address Resolution Protocol)를 사용해서 next hop 
 
 IP routing을 하면 그 결과물로 next hop IP와 해당 IP로 패킷 전송할 때 사용하는 인터페이스(transmit interface, 혹은 NIC)를 알게 된다. 따라서 transmit NIC의 드라이버를 호출한다.
 
-만약 [tcpdump](http://www.tcpdump.org/)나 [Wireshark](http://www.wireshark.org/) 같은 패킷 캡처 프로그램이 작동 중이면 커널은 패킷 데이터를 프로그램이 사용하는 메모리 버퍼에 복사한다. 수신도 마찬가지로 드라이버 바로 위에서 패킷을 캡처한다. 대개 traffic shaper 기능도 이 레이어에서 동작하도록 구현되어있다.
-
-드라이버는 NIC 제조사가 정의한 드라이버-NIC 통신 규약에 따라 패킷 전송을 요청한다.
-
-NIC는 패킷 전송 요청을 받고, 메인 메모리에 있는 패킷을 자신의 메모리로 복사하고, 네트워크 선으로 전송한다. 이때 Ethernet 표준에 따라 IFG(Inter-Frame Gap), preamble, 그리고 CRC를 패킷에 추가한다. IFG, preamble은 패킷의 시작을 판단하기 위해 사용하고(네트워킹 용어로는 framing), CRC는 데이터 보호를 위해 사용한다(TCP, IP checksum과 같은 용도이다). 패킷 전송은 Ethernet의 물리적 속도, 그리고 Ethernet flow control에 따라 전송할 수 있는 상황일 때 시작된다. 회의장에서 발언권을 얻고 말하는 것과 비슷하다.
+![[Pasted image 20260126192848.png]]NIC는 패킷 전송 요청을 받고, 메인 메모리에 있는 패킷을 자신의 메모리로 복사하고, 네트워크 선으로 전송한다. 이때 Ethernet 표준에 따라 IFG(Inter-Frame Gap), preamble, 그리고 CRC를 패킷에 추가한다. IFG, preamble은 패킷의 시작을 판단하기 위해 사용하고(네트워킹 용어로는 framing), CRC는 데이터 보호를 위해 사용한다(TCP, IP checksum과 같은 용도이다). 패킷 전송은 Ethernet의 물리적 속도, 그리고 Ethernet flow control에 따라 전송할 수 있는 상황일 때 시작된다. 회의장에서 발언권을 얻고 말하는 것과 비슷하다.
 
 NIC가 패킷을 전송할 때 NIC는 호스트 CPU에 인터럽트(interrupt)를 발생시킨다. 모든 인터럽트에는 인터럽트 번호가 있으며, 운영체제는 이 번호를 이용하여 이 인터럽트를 처리할 수 있는 적합한 드라이버를 찾는다. 드라이버는 인터럽트를 처리할 수 있는 함수(인터럽트 핸들러)를 드라이브가 가동되었을 때 운영체제에 등록해둔다. 운영체제가 핸들러를 호출하고, 핸들러는 전송된 패킷을 운영체제에 반환한다.
 
@@ -150,7 +164,7 @@ NIC가 패킷을 전송할 때 NIC는 호스트 CPU에 인터럽트(interrupt)�
 
 
 
-# 데이터 수신 
+## 2.2 데이터 수신 
 
 ![[Pasted image 20260125230459.png]]
 
@@ -166,7 +180,7 @@ Ethernet 레이어에서도 패킷이 올바른지 검사하고, 상위 프로�
 
 IP 레이어에서도 패킷이 올바른지 검사한다. IP 헤더 checksum을 확인하는 것이다. 논리적으로 여기서 IP routing을 해서 패킷을 로컬 장비가 처리해야 하는지, 아니면 다른 장비로 전달해야 하는지 판단한다. 로컬 장비가 처리해야 하는 패킷이면 IP 헤더의 proto 값을 보고 상위 프로토콜(트랜스포트 프로토콜)을 찾는다. TCP proto 값은 6이다. IP 헤더를 제거하고 TCP 레이어로 패킷을 전달한다.
 
-하위 레이어에서와 마찬가지로 TCP 레이어에서도 패킷이 올바른지 검사한다. TCP checksum도 확인한다. 앞서 언급했듯이 요즘의 네트워크 스택에는 checksum offload 기술이 적용되어 있기 때문에 커널이 checksum을 직접 계산하지 않는다.
+하위 레이어에서와 마찬가지로 TCP 레이어에서도 패킷이 올바른지 검사한다. TCP checksum도 확인한다. 
 
 다음으로 패킷이 속하는 연결, 즉 TCP control block을 찾는다. 이때 패킷의 <소스 IP, 소스 port, 타깃 IP, 타깃 port>를 식별자로 사용한다. 연결을 찾으면 프로토콜을 수행해서 받은 패킷을 처리한다. 새로운 데이터를 받았다면, 데이터를 receive socket buffer에 추가한다. TCP 상태에 따라 새로운 TCP 패킷(예를 들어 ACK 패킷)을 전송할 수 있다. 여기까지 해서 TCP/IP 수신 패킷 처리 과정이 끝나게 된다.
 
@@ -174,3 +188,28 @@ Receive socket buffer 크기가 결국은 TCP의 receive window이다. 어느 �
 
 이후 애플리케이션이 read 시스템 콜을 호출하면 커널 영역으로 전환되고, socket buffer에 있는 데이터를 유저 공간의 메모리로 복사해 간다. 복사한 데이터는 socket buffer에서 제거한다. 그리고 TCP를 호출한다. TCP는 socket buffer에 새로운 공간이 생겼기 때문에 receive window를 증가시킨다. 그리고 프로토콜 상태에 따라 패킷을 전송한다. 패킷 전송이 없으면 시스템 콜이 종료된다.
 
+# 3. TCP 사용 시 서비스에서 겪을 수 있는 문제들
+
+## 3.1 TIME_WAIT 소켓
+
+앞서 3 way handshake를 살펴 보았지만 TIME_WAIT 문제를 알아보기 위해 이와 연관이 있는 4-way Handshake 를 살펴 보자
+
+![[스크린샷 2026-01-26 오후 8.24.18.png]]
+네트워크 연결 종료는 서버측에서, 클라이언트 측에서 모두 시도할 수 있으므로 
+Active closer는 먼저 연결을 끊는 쪽, Passive Closer는 그 반대라고 표현이된다. 
+
+Active Closer 쪽에 TIME_WAIT 소켓이 생성되는 것을 볼 수 있다. 서버와 클라이언트 모두 Time_Wait가 생길 수 있는 것이다. (끊는 주체에 따라서)
+
+1. Active closer는 연결을 끊기 위해 Passive Closer에게 FIN 패킷을 보낸다. 
+2. Passive closer는 이에 대한 응답으로 ACK 패킷을 보낸다. 
+3. Passive closer는 소켓 정리 후에 서버에게 연결 종료를 위한 FIN 패킷을 보낸다. 
+4. Active closer는 Passive closer에게  ACK 패킷을 보낸 후 연결을 종료한다. 
+
+> 왜 종료는 4-way가 필요할까? 
+
+그 이유는 두괄식으로 말하면 TCP 가 양방향 통신이기 때문이다. 
+한쪽이 보낼 데이터가 없다고 해서 상대방도 보낼 데이터가 없다는 보장이 없기 때문에, 각 방향의 연결을 독립적으로 닫아야한다. 
+
+ACK를 보내는 것은 일단 FIN을 받았다는 응답만 보내는 것이다. 이때 Half-Close 상태에 들어가며 Active는 Passive에 데이터를 보낼 수 없지만 그 반대만 가능한 상태에 들어가게 된다. Passive도 다 보내면 그때 FIN을 보내게 된다. 그렇기 때문에 4 way이다.
+
+TIME_WAIT 가 발생시킬 수 있는 문제로 소켓 고갈 문제가 발생할 수 있다.
