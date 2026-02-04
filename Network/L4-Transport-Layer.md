@@ -60,13 +60,107 @@
 - Connection은 데이터 + 버퍼 + 번호 + 타이머 + 상태 머신이 결합된 구조
 ##### `socket` 객체
 - 애플리케이션이 참조하는 커널 객체
-- 파일 디스크립터를 통해 접근
+###### `struct socket`: User space
+- User Space의 `fd`와 커널 네트워크 스택을 이어주는 인터페이스
+- 시스템콜의 진입점
+- 파일 디스크립터를 통해 `socket` 객체에 접근
 ```c
+// include/linux/net.h:116
+struct socket { // the kernel representation of a BSD socket
+	socket_state	state;
+	short			type;
+	unsigned long	flags;
+	struct file		*file; // File Descriptor와 직접 연결
+	struct sock		*sk; // Transport-level state - 실제 네트워킹 상태
+	...
+};
+```
+```c
+// include/linux/fs.h:1258
+// fd → struct file → struct socket → struct sock
+struct file { // Represent a file
+	spinlock_t			f_lock;
+	fmode_t				f_mode;
+	const struct file_operations *f_op; // read/write 함수 호출이 소켓 구현으로 디스패치
+	
+	...
+	struct inode			*f_inode; // Socket File로 연결
+	unsigned int			f_flags;
+	...
+};
+```
+###### `struct sock`: Kernel Space
+- Transport Layer의 핵심 상태 객체
+- 커널이 소켓을 찾아오기 위한 최소 정보
+```c
+// include/net/sock.h:151
+/**
+ *	struct sock_common - minimal network layer representation of sockets
+ *	@skc_daddr: Foreign IPv4 addr
+ *	@skc_rcv_saddr: Bound local IPv4 addr
+ *	@skc_addrpair: 8-byte-aligned __u64 union of @skc_daddr & @skc_rcv_saddr
+ *	@skc_hash: hash value used with various protocol lookup tables
+ *	@skc_u16hashes: two u16 hash values used by UDP lookup tables
+ *	@skc_dport: placeholder for inet_dport/tw_dport
+ *	@skc_num: placeholder for inet_num/tw_num
+ *	@skc_portpair: __u32 union of @skc_dport & @skc_num
+ *	@skc_family: network address family
+ *	@skc_state: Connection state
+ *	@skc_reuse: %SO_REUSEADDR setting
+ *	@skc_reuseport: %SO_REUSEPORT setting
+ */
+struct sock_common {
+	union {
+		__addrpair	skc_addrpair;
+		struct {
+			__be32	skc_daddr; // remote(연결된 상대) IPv4 addr
+			__be32	skc_rcv_saddr; // local IPv4 addr
+		};
+	};
+	union  { // 커널이 수신 패킷 들어왔을 때 해시 테이블로 소켓을 빠르게 찾음 (demultiplex)
+		unsigned int	skc_hash; 
+		__u16		skc_u16hashes[2];
+	};
+	/* skc_dport && skc_num must be grouped as well */
+	union {
+		__portpair	skc_portpair;
+		struct {
+			__be16	skc_dport; // remote port
+			__u16	skc_num;   // local port
+		};
+	};
+	unsigned short		skc_family;
+	volatile unsigned char	skc_state; // connection state (ESTABLISHED, TIME_WAIT)
+	unsigned char		skc_reuse:4;
+	unsigned char		skc_reuseport:1;
+	...
+};
+```
 
+```c
+/**
+  *	struct sock - network layer representation of sockets
+  *	@__sk_common: shared layout with inet_timewait_sock
+  ...
+  */
+ struct sock {
+	/*
+	 * Now struct inet_timewait_sock also uses sock_common, so please just
+	 * don't add nothing before this first member (__sk_common) --acme
+	 */
+	struct sock_common	__sk_common; // timewait 소켓 등과 메모리 레이아웃 공유
+	...
+};
 ```
 ##### 송신/수신 버퍼(queue)
 ```c
-
+// include/net/sock.h:405
+struct sock {
+	struct sk_buff_head	sk_receive_queue; // recv buffer
+	struct sk_buff_head	sk_write_queue; // send buffer
+	int			sk_rcvbuf; // size of receive buffer
+	int			sk_sndbuf; // size of send buffer size
+};
 ```
 ##### 시퀀스 번호 및 전송 진행 상태
 - 순서 보장을 위한 기준
@@ -92,6 +186,8 @@
 - 상태 전이는 Connection 자원의 생명주기 변화를 의미
 ### 2.3. Linux kernel: Port의 자원 관리와 Connection의 상태 관리
 `bind()`와 `connect()`의 흐름을 통해 Port 네임스페이스 관리와 Connection 상태 관리가 커널 내부에 어떻게 결합되어 있는지 알아보자.
+- Linux Kernel Source: [Github - torvalds/linux:Linux kernel source tree](https://linux-kernel-labs.github.io/refs/heads/master/labs/networking.html)
+- 참고자료: [Networking - The Linux Kernel Documentation](https://linux-kernel-labs.github.io/refs/heads/master/labs/networking.html)
 #### 2.3.1. `bind()`와 Port 네임스페이스
 - `bind()`는 커널 내부에서 Port 네임스페이스에 소켓을 등록하는 작업
 - 등록 과정에서 **권한 검사, 충돌 검사, 네임스페이스 분리** 발생
@@ -219,13 +315,14 @@ Transport Layer는 패킷을 전달하는 계층이 아니라, 패킷을 애플�
 - `recvfrom()` 호출은 항상 하나의 메시지 단위를 반환하며 버퍼가 작으면 메시지가 잘릴 수 있음.
 - 애플리케이션은 메시지 경계 유지, 순서/손실 처리를 직접 책임짐.
 #### 4.2.3. TCP vs. UDP: 추상화의 차이
-| 구분           | TCP          | UDP           |
-| ------------ | ------------ | ------------- |
-| 데이터 단위       | 바이트 스트림      | 메시지(datagram) |
-| 패킷 경계        | 숨김           | 유지            |
-| 순서 보장        | O            | X             |
-| 재전송          | O            | X             |
-| read/recv 의미 | “연속된 데이터 일부” | “하나의 메시지”     |
+| 구분           | TCP                | UDP               |
+| ------------ | ------------------ | ----------------- |
+| 데이터 단위       | 바이트 스트림            | 메시지(datagram)     |
+| 패킷 경계        | 숨김                 | 유지                |
+| 순서 보장        | O                  | X                 |
+| 재전송          | O                  | X                 |
+| read/recv 의미 | “연속된 데이터 일부”       | “하나의 메시지”         |
+|              | `recv/send(write)` | `recvfrom/sendto` |
 - L4에서 TCP와 UDP의 차이는 신뢰성 여부가 아니라, 어떤 추상화와 상태를 구현하느냐의 차이
 ### 4.3. 수신 경로에서의 책임 경계
 ##### L4가 관리하는 것
