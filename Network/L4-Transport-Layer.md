@@ -72,7 +72,7 @@ struct socket { // the kernel representation of a BSD socket
 	unsigned long	flags;
 	struct file		*file; // File Descriptor와 직접 연결
 	struct sock		*sk; // Transport-level state - 실제 네트워킹 상태
-	...
+	// ...
 };
 ```
 ```c
@@ -82,18 +82,17 @@ struct file { // Represent a file
 	spinlock_t			f_lock;
 	fmode_t				f_mode;
 	const struct file_operations *f_op; // read/write 함수 호출이 소켓 구현으로 디스패치
-	
-	...
+	// ...
 	struct inode			*f_inode; // Socket File로 연결
 	unsigned int			f_flags;
-	...
+	// ...
 };
 ```
 ###### `struct sock`: Kernel Space
 - Transport Layer의 핵심 상태 객체
 - 커널이 소켓을 찾아오기 위한 최소 정보
 ```c
-// include/net/sock.h:151
+// include/net/sock.h
 /**
  *	struct sock_common - minimal network layer representation of sockets
  *	@skc_daddr: Foreign IPv4 addr
@@ -133,7 +132,7 @@ struct sock_common {
 	volatile unsigned char	skc_state; // connection state (ESTABLISHED, TIME_WAIT)
 	unsigned char		skc_reuse:4;
 	unsigned char		skc_reuseport:1;
-	...
+	// ...
 };
 ```
 
@@ -149,15 +148,17 @@ struct sock_common {
 	 * don't add nothing before this first member (__sk_common) --acme
 	 */
 	struct sock_common	__sk_common; // timewait 소켓 등과 메모리 레이아웃 공유
-	...
+	// ...
 };
 ```
 ##### 송신/수신 버퍼(queue)
 ```c
 // include/net/sock.h:405
 struct sock {
+	// ...
 	struct sk_buff_head	sk_receive_queue; // recv buffer
 	struct sk_buff_head	sk_write_queue; // send buffer
+	// ...
 	int			sk_rcvbuf; // size of receive buffer
 	int			sk_sndbuf; // size of send buffer size
 };
@@ -165,14 +166,101 @@ struct sock {
 ##### 시퀀스 번호 및 전송 진행 상태
 - 순서 보장을 위한 기준
 ```c
+// include/linux/tcp.h
+struct tcp_sock {
+	// ...
+	u32	max_window;	/* Maximal window ever seen from peer	*/	
+	// ...
+	u32	snd_wnd;	/* The window we expect to receive	*/	
+	u32	snd_cwnd;	/* Sending congestion window		*/
+	// ...
+	u32	rcv_nxt;	/* What we want to receive next		*/
+	u32	snd_nxt;	/* Next sequence we send		*/
+	u32	snd_una;	/* First byte we want an ack for	*/
+	// ...
+	u32	rcv_wnd;	/* Current receiver window		*/
+	// ...
+};
+```
+```c
+// net/ipv4/tcp_input.c
+static void tcp_data_queue(struct sock *sk, struct sk_buff *skb)
+{
+	struct tcp_sock *tp = tcp_sk(sk); 
+	enum skb_drop_reason reason;
+	bool fragstolen;
+	int eaten;
+	
+	/* If a subflow has been reset, the packet should not continue
+	 * to be processed, drop the packet.
+	 */
 
+	 // ...
+	 
+	 /*  Queue data for delivery to the user.
+	 *  Packets in sequence go to the receive queue.
+	 *  Out of sequence packets to the out_of_order_queue.
+	 */
+	 
+	 if (TCP_SKB_CB(skb)->seq == tp->rcv_nxt) { // in-order segment
+		 if (tcp_receive_window(tp) == 0) {
+			 // send bare FIN packets -> goto queue_and_out;
+			 // zero window -> goto out_of_window;
+		 }
+queue_and_out:
+		// ...
+		eaten = tcp_queue_rcv(sk, skb, &fragstolen); // receive queue에 넣음
+		if (skb->len)
+			tcp_event_data_recv(sk, skb); // 데이터 수신 이벤트 처리 
+		if (TCP_SKB_CB(skb)->tcp_flags & TCPHDR_FIN)
+			tcp_fin(sk); // FIN 처리
+			
+		if (!RB_EMPTY_ROOT(&tp->out_of_order_queue)) {
+			// 정상 순서인데 쌓아둔 out-of-order queue가 존재하면
+			tcp_ofo_queue(sk); 
+		}
+		// ...
+out_of_window: // ...
+drop:   // ...
+		// ...
+		tcp_data_queue_ofo(sk, skb); // 정상 순서를 벗어난 경우 out-of-order queue에 저장
+}		
 ```
 ##### 재전송/유지 관리를 위한 타이머
 - ACK 타임아웃
 - 재전송 타이머
 - 연결 유지 관련 타이머
 ```c
+// include/net/sock.h
+struct sock {
+	union {
+		struct timer_list	sk_timer;
+		struct timer_list	tcp_retransmit_timer;
+		struct timer_list	mptcp_retransmit_timer; // multipath TCP
+	};
+}
+```
+```c
+// linux/net/ipv4/tcp_timer.c
 
+/**
+ *  tcp_retransmit_timer() - The TCP retransmit timeout handler
+ *  @sk:  Pointer to the current socket.
+ *
+ *  This function gets called when the kernel timer for a TCP packet
+ *  of this socket expires.
+ *
+ *  It handles retransmission, timer adjustment and other necessary measures.
+ *
+ *  Returns: Nothing (void)
+ */
+ void tcp_retransmit_timer(struct sock *sk)
+{
+	struct tcp_sock *tp = tcp_sk(sk);
+	struct net *net = sock_net(sk);
+	struct inet_connection_sock *icsk = inet_csk(sk);
+	
+}
 ```
 ##### 상태 머신
 - `LISTEN`, `ESTABLISHED`, `FIN_WAIT`, `TIME_WAIT` 등의 현재 연결 단계를 나타냄.
