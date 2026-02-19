@@ -106,6 +106,69 @@ HTTP 자체는 상태를 저장하지 않음.
 - 토큰 자체에 정보 포함
 	- 서버가 상태를 저장하지 않음 → 진짜 Stateless 인증
 
+
+# 3. CORS
+
+CORS (Cross-Origin Resource Sharing)는 브라우저가 Origin의 서버에 요청을 보낼 때 적용하는 보안 정책
+
+기본 전제:
+
+> 브라우저는 기본적으로 다른 Origin으로의 요청을 제한한다.
+
+이 기본 정책을 **SOP (Same-Origin Policy)** 라고 함
+
+> [!info] Origin
+> Origin은 3가지 요소의 조합 : Protocol + Host + Port
+> 
+http://example.com | http + example.com + 80|
+https://example.com | https + example.com + 443|
+http://example.com:3000 | http + example.com + 3000|
+
+**왜 CORS가 필요한가?**
+: 브라우저 보안 때문!
+
+예를 들어:
+1. 사용자가 은행 사이트에 로그인
+2. 다른 악성 사이트 방문
+3. 악성 사이트가 은행 API에 요청 시도
+    
+브라우저가 아무 제약 없이 요청을 허용하면  **CSRF / 데이터 탈취** 문제가 발생
+
+그래서 브라우저는 다른 Origin으로의 요청은 서버가 허락한 경우에만 허용
+
+### Simple Request
+
+조건:
+- GET / POST / HEAD
+- Content-Type이 아래 중 하나
+    - text/plain   
+    - application/x-www-form-urlencoded    
+    - multipart/form-data
+        
+
+이 경우:
+
+브라우저가 바로 요청을 보내고 응답 헤더에 아래가 있어야 허용
+`
+`Access-Control-Allow-Origin: http://localhost:3000`
+
+### Preflight Request 
+
+조건
+- PUT, DELETE 등
+- JSON 전송 (application/json)
+- Authorization 헤더 사용
+
+이 경우 브라우저는 먼저 **OPTIONS 요청**을 보soa
+
+`OPTIONS /api/data`  ->  **Preflight**
+
+서버가 응답:
+`Access-Control-Allow-Origin: http://localhost:3000 Access-Control-Allow-Methods: GET, POST, PUT, DELETE Access-Control-Allow-Headers: Content-Type, Authorization`
+
+허용되면 → 실제 요청 전송  
+허용 안되면 → 브라우저에서 차단
+
 # 2. HTTP 메서드의 '안전성'과 '멱등성'
 
 단순히 GET/POST의 차이를 넘어, API를 설계할 때 반드시 고려해야 하는 성질
