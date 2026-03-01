@@ -27,7 +27,8 @@ Service: iptables DNAT로 Pod IP로 변환
 
 ## 1. 쿠버네티스 아키텍처
 [Kubernetes - Cluster Architecture](https://kubernetes.io/docs/concepts/architecture/)
-![[img/k8s-cluster-architecture.png]]
+
+![](img/k8s-cluster-architecture.png)
 - Pod
 	- 쿠버네티스에서 배포/실행의 최소 단위.
 	- 하나 이상의 컨테이너 묶음.
@@ -49,7 +50,7 @@ Service: iptables DNAT로 Pod IP로 변환
 
 - source: [Kubernetes NodePort vs LoadBalancer vs Ingress](https://medium.com/google-cloud/kubernetes-nodeport-vs-loadbalancer-vs-ingress-when-should-i-use-what-922f010849e0)
 
-![[img/k8s-exposing-service.png]]
+![](img/k8s-exposing-service.png)
 
 - 외부 클라이언트가 클러스터 내 Service에 접근하는 방법:
 	1. **NodePort**: Service is accessed via `NodeIP:port`
@@ -59,7 +60,7 @@ Service: iptables DNAT로 Pod IP로 변환
 ### 2.1. NodePort
 
 모든 노드의 특정 포트를 열어서 외부에 노출한다. 외부 클라이언트는 `NodeIP:port`로 접근한다.
-![[img/k8s-service-nodeport.png]]
+![](img/k8s-service-nodeport.png)
 
 - 가장 단순한 방법
 - 모든 노드에 동일한 포트가 열리므로, 어느 노드로 접근해도 동작
@@ -68,15 +69,16 @@ Service: iptables DNAT로 Pod IP로 변환
 ### 2.2. LoadBalancer
 
 클라우드 환경에서 외부 로드 밸런서를 생성하고 고정 IP(VIP)를 부여한다. 외부 클라이언트는 이 VIP로 접근한다.
-![[img/k8s-service-loadbalancer.png]]
+![](img/k8s-service-loadbalancer.png)
+
 - 퍼블릭 클라우드(AWS, GCP, Azure)에서 주로 사용
-- 베어메탈 환경에서는 **MetalLB** 같은 별도 솔루션이 필요
 - Service마다 외부 IP가 하나씩 생성됨
 
 ### 2.3. Ingress
 
 여러 Service 앞에 하나의 진입점을 두고, 도메인/경로 기반으로 트래픽을 라우팅한다.
-![[img/k8s-service-ingress.png]]
+![](img/k8s-service-ingress.png)
+
 - 여러 Service를 하나의 외부 IP로 노출 가능 → LoadBalancer 대비 비용 절감
 - L7(HTTP/HTTPS) 수준의 라우팅 제공
 - Ingress는 쿠버네티스 오브젝트이고, 실제 구현은 Ingress Controller가 담당
@@ -87,11 +89,13 @@ Service: iptables DNAT로 Pod IP로 변환
 Service를 거치면 동일하게 iptables DNAT가 동작한다.
 
 source: [Demystifying Kubernetes Service Packet Path](https://medium.com/@abhishek.amjeet/demystifying-kubernetes-services-packet-path-98297874e5f5)
-![[img/k8s-iptable-chains.png]]
+![](img/k8s-iptable-chains.png)
+
 ### 3.1. ClusterIP
 
 Service에는 **ClusterIP**라는 고정 IP가 부여된다. 
 하지만 이 IP는 어떤 인터페이스에도 할당되어 있지 않은 **가상 IP**다.
+
 ```bash
 ip addr  # 어떤 노드에서 실행해도 ClusterIP는 보이지 않음
 ```
@@ -124,7 +128,7 @@ iptables rule 구조:
 -A KUBE-SEP-BBBB -p tcp -j DNAT --to-destination 10.244.1.6:8080
 ```
 예시: [Demystifying Kubernetes Services Packet Path](https://medium.com/@abhishek.amjeet/demystifying-kubernetes-services-packet-path-98297874e5f5)
-![[img/k8s-nat-table-ex.png]]
+![](img/k8s-nat-table-ex.png)
 ### 3.3. Pod가 교체되어도 연결이 유지되는 이유
 
 **Endpoints Controller**가 Service selector와 일치하는 살아있는 Pod 목록을 **Endpoints** 오브젝트로 관리한다. Pod가 죽거나 새로 뜨면 자동으로 갱신된다.
