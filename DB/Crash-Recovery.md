@@ -13,7 +13,7 @@ Date: 2026-03-29
 ##### Atomicity
 트랜잭션은 전부 반영되거나, 전혀 반영되지 않아야 한다.
 
-## 1
+## 1. System Failure
 ### 1.1. Failure Classification
 시스템에서 발생할 수 있는 failure는 크게 세 종류가 있다.
 
@@ -22,6 +22,7 @@ Date: 2026-03-29
 | Transaction Failure | 트랜잭션 자체의 실패 (e.g., Logical error, Deadlock) |
 | System Crash        | 하드웨어 오류나 OS 버그로 메모리 내용이 소멸하는 경우             |
 | Disk Failure        | 디스크가 물리적으로 손상되는 경우                          |
+
 WAL과 Recovery는 System Crash를 대상으로 한다. 디스크는 살아있고 메모리만 날아갔다는 가정이다.
 
 ### 1.2. Failure Scenarios
@@ -73,6 +74,7 @@ Buffer Pool을 어떻게 관리하는지에 따라 복구 방식이 결정된다
 |          | No-Steal     | 커밋 전에는 해당 트랜잭션이 수정한 페이지를 절대 디스크에 쓰지 않음.                          |
 | Flush    | Force        | 커밋 시점에 변경된 모든 버퍼 페이지를 디스크의 데이터 파일에 강제 기록                         |
 |          | **No-Force** | 커밋 응답을 반환하더라도 실제 디스크 기록은 나중으로 미룸.<br>**빠른 커밋 응답 속도** (I/O 최적화)   |
+
 데이터베이스는 논리적으로 안전한 No-Steal & Force 조합 대신
 디스크 I/O 성능을 극대화하기 위해 로그 관리를 감수하고 **Steal & No-Force** 정책을 표준으로 채택한다.
 
@@ -104,6 +106,7 @@ Buffer Pool에 공간이 부족하면 DB는 어떤 페이지를 밀어내야 한
 로그를 보면 되돌아가야 할 상태와 앞으로 가야 할 상태 모두를 알 수 있다.
 
 로그 레코드는 다음과 같은 형식으로 기록된다.
+
 ```
 <Ti, Xj, V1, V2>
  Ti  = 트랜잭션 식별자
@@ -113,6 +116,7 @@ Buffer Pool에 공간이 부족하면 DB는 어떤 페이지를 밀어내야 한
 ```
 
 예를 들어, 계좌 A에서 B로 50달러를 이체하는 트랜잭션 $T_0$ 의 로그는 다음과 같이 쌓인다.
+
 ```
 <T0 start>
 <T0, A, 1000, 950>    ← A를 1000에서 950으로 변경
@@ -132,6 +136,7 @@ LSN으로부터 어떤 로그 레코드가 먼저 쓰였는지, 어떤 데이터
 | **Flushed LSN** | Log Buffer (Memory) | 디스크 상의 WAL 파일에 `fsync()`가 완료된 마지막 오프셋 |
 | **Page LSN**    | 각 Data Page         | 해당 데이터 페이지가 마지막으로 수정된 시점의 LSN         |
 | Checkpoint LSN  | 시스템 메타              | 이 시점의 트랜잭션 상태와 Dirty Page 목록이 기록      |
+
 - `pageLSN`은 트랜잭션이 데이터 페이지의 레코드를 수정할 때마다,
 - `flushedLSN`은 DBMS가 WAL buffer의 내용을 디스크에 쓸 때마다 업데이트된다.
 
@@ -142,6 +147,7 @@ Buffer Pool Manager가 메모리의 특정 Dirty Page를 디스크로 flush하�
 
 로그 없이 데이터 페이지가 먼저 쓰이면
 크래시 시 변경 전후 상태를 알 수 없어 undo/redo 모두 불가능하다.
+
 ## 4. Recovery Algorithm
 ### 4.1. Redo Phase
 No-Force 정책에 따라 커밋된 트랜잭션이라도 Dirty Page가 아직 디스크에 없을 수 있다.
