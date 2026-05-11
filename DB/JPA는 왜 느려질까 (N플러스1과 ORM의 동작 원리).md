@@ -121,8 +121,7 @@ JOIN users u ON o.user_id = u.id
 	- 네트워크 전송량 증가
 	- pagination 깨짐 (아래에서 다룸)
 	- Cartesian Explosion : Join 연산이므로 여러 컬렉션 fetch join 시 연산이 엄청 많아짐
-- 
-  ```
+- ```
 Order1 ProductA
 Order1 ProductB
 Order1 ProductC
@@ -133,8 +132,8 @@ Order1 ProductC
 	- `@ManyToOne fetch join`은 문제 없음
 	- 두 번 조회 : 실무에서도 흔하게 사용함
 		```
-1. Order ID pagination
-2. IN 조회로 연관 데이터 가져오기
+		1. Order ID pagination
+		2. IN 조회로 연관 데이터 가져오기
 		```
 
 ### 방법 2 @EntityGraph
