@@ -121,11 +121,9 @@ JOIN users u ON o.user_id = u.id
 	- 네트워크 전송량 증가
 	- pagination 깨짐 (아래에서 다룸)
 	- Cartesian Explosion : Join 연산이므로 여러 컬렉션 fetch join 시 연산이 엄청 많아짐
-- ```
-Order1 ProductA
-Order1 ProductB
-Order1 ProductC
-  ```
+- Order1 ProductA
+  Order1 ProductB
+  Order1 ProductC
 ##### 2. Pagination 문제
 - `@OneToMany fetch join` 과 pagination을 함께 사용할 때 메모리에서 pagination이 될 수 있는데 데이터가 많을 경우 성능 문제 발생 가능 (아래에서 다룸)
 - 보통 OneToMany의 경우 다른 방법을 사용해 해결 (Batch size, DTO 조회, 두 번 조회)
@@ -160,10 +158,10 @@ Order1 ProductC
 		- `@Query("SELECT o FROM Order o JOIN FETCH o.user")`
 	- QueryDSL 사용해 Java코드로 여러 복잡한 조건들을 동적으로 조립 가능함
 		```
-queryFactory
-    .selectFrom(order)
-    .join(order.user, user).fetchJoin()
-    .fetch();
+		queryFactory
+		    .selectFrom(order)
+		    .join(order.user, user).fetchJoin()
+		    .fetch();
 		```
 ### 방법 3 Batch Size
 - 한 번에 가져오는 데이터 행(Row) 수를 늘려 쿼리 수를 줄임 (컬렉션은 따로 조회함)
@@ -192,11 +190,12 @@ queryFactory
 - 단점
 	- 재사용성 감소
 	- 코드 증가
-- ```Java
-  select new OrderSummaryDto(
-    o.id,
-    u.name
-)
+- ```
+  Java
+	  select new OrderSummaryDto(
+	    o.id,
+	    u.name
+	)
   ```
 
 ### 해결 방법 선택 방법
@@ -211,10 +210,10 @@ queryFactory
 	- 대량 데이터를 효율적으로 처리하기 위한 전략
 	- 메모리, DB, UI에서 사용
 	- Pagination을 구현하는 대표적인 DB 기법이 LIMIT/OFFSET
-		ex) 3페이지 데이터 가져오기
+		- ex) 3페이지 데이터 가져오기
 		```SQL
-SELECT * FROM orders
-LIMIT 20 OFFSET 40
+		SELECT * FROM orders
+		LIMIT 20 OFFSET 40
 		```
 
 ### 예시 : 주문 2개만 pagination해서 가져오기 => LIMIT 2
@@ -225,16 +224,16 @@ Order3 -> ItemE, ItemF
 ```
 - JPQL 
 	```JPQL
-SELECT o  
-FROM Order o  
-JOIN FETCH o.orderItems
+	SELECT o  
+	FROM Order o  
+	JOIN FETCH o.orderItems
 	```
 - SQL
 	``` SQL
-SELECT *  
-FROM orders o  
-JOIN order_item oi ON oi.order_id = o.id  
-LIMIT 2
+	SELECT *  
+	FROM orders o  
+	JOIN order_item oi ON oi.order_id = o.id  
+	LIMIT 2
 	```
 - Join 결과 행들을 기준으로 페이지네이션 결과에서 Order1만 가져옴
 	``` 결과
@@ -248,8 +247,8 @@ LIMIT 2
 	```
 - Limit 결과
 	```
-Order1 ItemA
-Order1 ItemB
+	Order1 ItemA
+	Order1 ItemB
 	```
 
 
@@ -276,12 +275,12 @@ Join 데이터를 부모/자식으로 볼 때
 - 객체는 참조(reference) 로 연결되고 그런 것처럼 보임, DB는 객체 그래프가 없이 Table, Row, Foreign Key만 존재함.
 	- 객체는 필요하면 참조를 따라가면 되는 방식
 		```Java
-order.getUser().getAddress().getCity()
+		order.getUser().getAddress().getCity()
 		```
 	- DB입장에서는 처음부터 어떤 데이터를 가져올 지 명시해야 함
 		```SQL
-JOIN user
-JOIN address
+		JOIN user
+		JOIN address
 		```
 
 ### 발생하는 문제
