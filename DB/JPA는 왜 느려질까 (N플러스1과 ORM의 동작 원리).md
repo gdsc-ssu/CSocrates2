@@ -129,20 +129,18 @@ JOIN users u ON o.user_id = u.id
 - 보통 OneToMany의 경우 다른 방법을 사용해 해결 (Batch size, DTO 조회, 두 번 조회)
 	- `@ManyToOne fetch join`은 문제 없음
 	- 두 번 조회 : 실무에서도 흔하게 사용함
-		```
 		1. Order ID pagination
 		2. IN 조회로 연관 데이터 가져오기
-		```
 
 ### 방법 2 @EntityGraph
 - 이 조회에서는 연관 객체도 같이 가져오라고 선언적으로 지정하는 기능
 - 기본 조회 : `findAll()` → Order만 조회
 - EntityGraph 추가 → Order + User 함께 조회
 	- 내부적으로는 fetch join 비슷하게 동작
-		```java
-		@EntityGraph(attributePaths = {"user"})
-		List<Order> findAll();
-		```
+```java
+@EntityGraph(attributePaths = {"user"})
+List<Order> findAll();
+```
 - 장점
 	- 코드 간단
 	- 선언적
@@ -157,12 +155,12 @@ JOIN users u ON o.user_id = u.id
 	- 일반 JPQL은 문자열 기반이므로 오타 가능성 존재
 		- `@Query("SELECT o FROM Order o JOIN FETCH o.user")`
 	- QueryDSL 사용해 Java코드로 여러 복잡한 조건들을 동적으로 조립 가능함
-		```
-		queryFactory
-		    .selectFrom(order)
-		    .join(order.user, user).fetchJoin()
-		    .fetch();
-		```
+```
+queryFactory
+	.selectFrom(order)
+	.join(order.user, user).fetchJoin()
+	.fetch();
+```
 ### 방법 3 Batch Size
 - 한 번에 가져오는 데이터 행(Row) 수를 늘려 쿼리 수를 줄임 (컬렉션은 따로 조회함)
 - 장점
@@ -172,14 +170,14 @@ JOIN users u ON o.user_id = u.id
 	- 완전한 해결은 아님
 	- 여전히 추가 쿼리가 존재함
 - 설정
-	```YAML
-	spring.jpa.properties.hibernate.default_batch_fetch_size=100
-	```
+```YAML
+spring.jpa.properties.hibernate.default_batch_fetch_size=100
+```
 - Batch 적용 시 SQL
-	```SQL
-	SELECT * FROM users
-	WHERE id IN (1,2,3,...)
-	```
+```SQL
+SELECT * FROM users
+WHERE id IN (1,2,3,...)
+```
 
 ### 방법 4 DTO Projection
 - 기본 컨셉 : 엔티티를 조회하지 말고 화면에 필요한 데이터만 가져오자
@@ -190,13 +188,13 @@ JOIN users u ON o.user_id = u.id
 - 단점
 	- 재사용성 감소
 	- 코드 증가
-- ```
-  Java
-	  select new OrderSummaryDto(
-	    o.id,
-	    u.name
-	)
-  ```
+- 
+```Java
+select new OrderSummaryDto(
+	o.id,
+	u.name
+)
+```
 
 ### 해결 방법 선택 방법
 - 해결책마다 Trade-Off가 존재함
@@ -211,10 +209,10 @@ JOIN users u ON o.user_id = u.id
 	- 메모리, DB, UI에서 사용
 	- Pagination을 구현하는 대표적인 DB 기법이 LIMIT/OFFSET
 		- ex) 3페이지 데이터 가져오기
-		```SQL
-		SELECT * FROM orders
-		LIMIT 20 OFFSET 40
-		```
+```SQL
+SELECT * FROM orders
+LIMIT 20 OFFSET 40
+```
 
 ### 예시 : 주문 2개만 pagination해서 가져오기 => LIMIT 2
 ```
@@ -223,33 +221,33 @@ Order2 -> ItemD
 Order3 -> ItemE, ItemF
 ```
 - JPQL 
-	```JPQL
-	SELECT o  
-	FROM Order o  
-	JOIN FETCH o.orderItems
-	```
+```JPQL
+SELECT o  
+FROM Order o  
+JOIN FETCH o.orderItems
+```
 - SQL
-	``` SQL
-	SELECT *  
-	FROM orders o  
-	JOIN order_item oi ON oi.order_id = o.id  
-	LIMIT 2
-	```
+``` SQL
+SELECT *  
+FROM orders o  
+JOIN order_item oi ON oi.order_id = o.id  
+LIMIT 2
+```
 - Join 결과 행들을 기준으로 페이지네이션 결과에서 Order1만 가져옴
-	``` 결과
-	Order1 ItemA
-	Order1 ItemB
-	Order1 ItemC
-	Order2 ItemD
-	Order3 ItemE
-	Order3 ItemF
-	...
-	```
+``` 결과
+Order1 ItemA
+Order1 ItemB
+Order1 ItemC
+Order2 ItemD
+Order3 ItemE
+Order3 ItemF
+...
+```
 - Limit 결과
-	```
-	Order1 ItemA
-	Order1 ItemB
-	```
+```
+Order1 ItemA
+Order1 ItemB
+```
 
 
 Join 데이터를 부모/자식으로 볼 때
@@ -277,11 +275,11 @@ Join 데이터를 부모/자식으로 볼 때
 		```Java
 		order.getUser().getAddress().getCity()
 		```
-	- DB입장에서는 처음부터 어떤 데이터를 가져올 지 명시해야 함
-		```SQL
-		JOIN user
-		JOIN address
-		```
+- DB입장에서는 처음부터 어떤 데이터를 가져올 지 명시해야 함
+	```SQL
+	JOIN user
+	JOIN address
+	```
 
 ### 발생하는 문제
 - 객체 관점
