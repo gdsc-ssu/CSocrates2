@@ -35,6 +35,13 @@ Redis는 메모리 기반이라 서버가 꺼지면 데이터가 사라진다. �
 
 실무에서는 두 가지를 함께 사용하는 경우가 많다. RDB로 빠른 복구를 챙기고, AOF로 데이터 유실 최소화를 챙기는 방식이다. 다만 Redis를 순수 캐시 용도로만 사용한다면 영속성 옵션을 아예 끄기도 한다. 어차피 캐시 데이터는 원본이 DB에 있기 때문이다.
 
+![[Pasted image 20260519181549.png]]
+- Redis를 캐시로만 사용하는 경우
+- 백업은 필요하지만 어느 정도의 데이터 손실이 발생해도 괜찮은 경우
+- 장애 상황 직전까지의 모든 데이터가 보장되어야 할 경우
+- 제일 강력한 내구성이 필요한 경우
+
+
 ### 자료구조
 Redis는 단순한 키-값 저장소처럼 보이지만, 값(Value)으로 다양한 자료구조를 지원한다. 어떤 자료구조를 쓰느냐에 따라 성능과 구현 방식이 크게 달라지기 때문에 각각의 특성을 잘 이해하는 게 중요하다.
 
@@ -282,3 +289,5 @@ keyspace_misses: 캐시 미스 수
 ### 참고
 https://redis.io/technology/data-structures/
 https://sihyung92.oopy.io/database/redis/1
+https://www.youtube.com/watch?v=92NizoBL4uA
+https://www.youtube.com/watch?v=AZjymlhSXOg
