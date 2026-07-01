@@ -1,0 +1,211 @@
+{
+  "main": {
+    "id": "b012ba964d0d18ef",
+    "type": "split",
+    "children": [
+      {
+        "id": "8e146ce22b9e584e",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "0a0788cf1787794e",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "OS/OS 가상화의 이해 - Virtual Machine과 Container의 등장.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "OS 가상화의 이해 - Virtual Machine과 Container의 등장"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "cba3cb9e29c2425c",
+    "type": "split",
+    "children": [
+      {
+        "id": "ebe9621d0ca78b33",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "21b60f1ee28704bb",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "파일 탐색기"
+            }
+          },
+          {
+            "id": "3557df1c20cc67a7",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "검색"
+            }
+          },
+          {
+            "id": "9c62fd86cc76a359",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "북마크"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 282.5004348754883,
+    "collapsed": true
+  },
+  "right": {
+    "id": "e5bdc5e789b93824",
+    "type": "split",
+    "children": [
+      {
+        "id": "1c48a0ad2a0efffc",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "380a0ce213911b8a",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "OS/OS 가상화의 이해 - Virtual Machine과 Container의 등장.md",
+                "collapseAll": true,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "OS 가상화의 이해 - Virtual Machine과 Container의 등장 의 백링크"
+            }
+          },
+          {
+            "id": "f120d17c52a68a98",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "DB/Redis.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Redis 의 나가는 링크"
+            }
+          },
+          {
+            "id": "891f7a8e00a5e8fb",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "태그"
+            }
+          },
+          {
+            "id": "a963f24e95a5cae2",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "모든 속성"
+            }
+          },
+          {
+            "id": "7bb64a6cb348080e",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "OS/OS 가상화의 이해 - Virtual Machine과 Container의 등장.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "OS 가상화의 이해 - Virtual Machine과 Container의 등장 의 개요"
+            }
+          }
+        ],
+        "currentTab": 4
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:빠른 전환기 열기": false,
+      "graph:그래프 뷰 열기": false,
+      "canvas:새 캔버스 만들기": false,
+      "daily-notes:오늘의 일일 노트 열기": false,
+      "templates:템플릿 삽입": false,
+      "command-palette:명령어 팔레트 열기": false,
+      "bases:새 베이스 생성하기": false
+    }
+  },
+  "active": "0a0788cf1787794e",
+  "lastOpenFiles": [
+    "OS/OS 가상화의 이해 - Virtual Machine과 Container의 등장.md",
+    "OS",
+    "OS/EEVDF 스케줄러.md",
+    "DB/img/Pasted-image-20260329221304.png",
+    "DB/img/Pasted-image-20260329215951.png",
+    "DB/img",
+    "DB/Crash-Recovery.md",
+    "DB",
+    "OS/img/스크린샷 2026-06-30 오후 2.22.00.png",
+    "OS/img/스크린샷 2026-06-30 오후 2.16.37.png",
+    "OS/img/스크린샷 2026-06-30 오후 12.59.17.png",
+    "OS/img/스크린샷 2026-06-30 오후 12.59.00.png",
+    "OS/img/스크린샷 2026-06-30 오후 1.00.00.png",
+    "OS/img/스크린샷 2026-06-30 오전 10.12.30.png",
+    "OS/img/스크린샷 2026-06-29 오후 8.31.08.png",
+    "OS/img/스크린샷 2026-06-29 오후 7.50.08.png",
+    "OS/img",
+    "OS",
+    "DB/Redis.md",
+    "OS"
+  ]
+}
